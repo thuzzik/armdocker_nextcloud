@@ -5,7 +5,8 @@ ARG NEXTCLOUD_VERSION=10.0.0
 
 RUN apt-get -yqq update 
 RUN apt-get -yqq install apache2 mariadb-server libapache2-mod-php5 php5-gd php5-json php5-mysql php5-curl php5-intl php5-mcrypt php5-imagick
-RUN mkdir /var/www/nextcloud \
+RUN mkdir -v /var/www/nextcloud \
+&& cd /var/www/nextcloud \
 && NEXTCLOUD_TARBALL="nextcloud-${NEXTCLOUD_VERSION}.tar.bz2" \
 && wget -q https://download.nextcloud.com/server/releases/${NEXTCLOUD_TARBALL} \
 && wget -q https://download.nextcloud.com/server/releases/${NEXTCLOUD_TARBALL}.sha256 \
@@ -21,6 +22,17 @@ RUN mkdir /var/www/nextcloud \
 && if [ "${FINGERPRINT}" != "${GPG_nextcloud}" ]; then echo "Warning! Wrong GPG fingerprint!" && exit 1; fi \
 && echo "All seems good, now unpacking ${NEXTCLOUD_TARBALL}..." \
 && tar xjf ${NEXTCLOUD_TARBALL} --strip 1 -C /var/www/nextcloud 
+
+COPY ./scripts/nextcloud.conf /etc/apache2/sites-available/nextcloud.conf
+
+RUN a2ensite nextcloud.conf \
+&& a2enmod rewrite \
+&& a2enmod headers \
+&& a2enmod env \
+&& a2enmod dir \
+&& a2enmod mime \
+&& chown -R www-data:www-data /var/www/nextcloud/ \
+&& service apache2 restart 
 
 VOLUME /var/www/nextcloud/data
 VOLUME /var/www/nextcloud/config
